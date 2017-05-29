@@ -1,0 +1,10 @@
+devops_key = "~/.ssh/id_rsa"
+bastion_key = "~/.ssh/id_rsa"
+chef_key = "/Users/jcalise/Projects/DevOps/chef-repo/.chef/bmc_devops-validator.pem"
+identifier =  "avitek-dev"
+manage_with_omc = false
+ad = 1
+compartment = "avitek"
+shape = "VM1"
+region = "us-ashburn-1"
+customer = "avitek"

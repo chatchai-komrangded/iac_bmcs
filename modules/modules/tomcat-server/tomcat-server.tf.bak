@@ -1,0 +1,92 @@
+
+
+module "tomcat-server" {
+  source = "../base/omc-config"
+  compartment_name = "${var.compartment_name}"
+  ad_name = "${var.ad_name}"
+  server_display_name = "${var.server_display_name}"
+  hostname = "${var.hostname}"
+  shape_name = "${var.shape_name}"
+  subnet_name = "${var.subnet_name}"
+  public_key = "${var.public_key}"
+  devops_key = "${var.devops_key}"
+  manage_with_omc = "${var.manage_with_omc}"
+  entity_content = "${data.template_file.omc_entity.rendered}"
+  omc = {
+    configure = "${var.manage_with_omc}"
+    omc_key = "RG_5BZtGjaTtLbAVRGpitu6UVA"
+    entity_file = "${data.template_file.omc_entity.rendered}"
+  }
+  bastion = {
+    host = "${var.bastion_host}"
+    private_key_path = "${var.bastion_private_key_path}"
+  }
+}
+
+resource "null_resource" "server_instance_config"{
+
+  provisioner "chef"  {
+          run_list = ["tomcat_demo::helloworld"]
+          node_name = "${var.server_display_name}"
+          server_url = "https://api.chef.io/organizations/bmc_devops"
+          recreate_client = true
+          user_name = "bmc_devops-validator"
+          user_key = "${file("/Users/jcalise/Projects/DevOps/chef-repo/.chef/bmc_devops-validator.pem")}"
+          version = "13.0.113"
+          connection {
+            host = "${module.tomcat-server.private_ip}"
+            type = "ssh"
+            user = "oracle"
+            private_key = "${file(var.devops_key)}"
+            bastion_host = "${var.bastion_host}"
+            bastion_private_key = "${file(var.bastion_private_key_path)}"
+            bastion_user = "opc"
+          }
+  }
+}
+
+data "template_file" "omc_entity" {
+  count = "${var.manage_with_omc}"
+  template = "${file("${path.module}/omc_tomcat_entity.tpl")}"
+  vars {
+      hostname = "${var.hostname}.omcdemo"
+      tomcat-name = "${var.server_display_name}"
+    }
+}
+
+resource "null_resource" "omc_instance_config"{
+  count = "${var.manage_with_omc}"
+  provisioner "file" {
+      content = "${data.template_file.omc_entity.rendered}"
+      destination = "/u01/omc/stage_two/omc_tomcat_entity.json"
+      connection {
+        host = "${module.tomcat-server.private_ip}"
+        type = "ssh"
+        user = "oracle"
+        private_key = "${file(var.devops_key)}"
+        bastion_host = "${var.bastion_host}"
+        bastion_private_key = "${file(var.bastion_private_key_path)}"
+        bastion_user = "opc"
+      }
+  }
+
+   provisioner "remote-exec" {
+        inline = [
+        "mkdir /u01/omc/stage_apm",
+        "/u01/omc/stage_two/AgentInstall.sh AGENT_TYPE=apm_java_as_agent STAGE_LOCATION=/u01/omc/stage_apm AGENT_REGISTRATION_KEY=RG_5BZtGjaTtLbAVRGpitu6UVA",
+        "unzip /u01/omc/stage_apm/ApmAgent-1.16.zip",
+        "chmod +x /u01/omc/stage_apm/ProvisionApmJavaAsAgent.sh",
+        "/u01/omc/stage_apm/ProvisionApmJavaAsAgent.sh -d /opt/tomcat_helloworld -no-wallet -no-cleanup",
+        "/u01/omc/app/cloud_agent/agent_inst/bin/omcli add_entity agent /u01/omc/stage_two/omc_tomcat_entity.json"
+        ]
+        connection {
+          host = "${module.tomcat-server.private_ip}"
+          type = "ssh"
+          user = "oracle"
+          private_key = "${file(var.devops_key)}"
+          bastion_host = "${var.bastion_host}"
+          bastion_private_key = "${file(var.bastion_private_key_path)}"
+          bastion_user = "opc"
+        }
+    }
+  }

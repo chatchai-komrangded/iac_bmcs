@@ -1,0 +1,73 @@
+#cloud-config
+# vim: syntax=yaml
+#
+
+write_files:
+-   encoding: b64
+    content: W21vbmdvZGItb3JnLTMuMl0NCm5hbWU9TW9uZ29EQiBSZXBvc2l0b3J5DQpiYXNldXJsPWh0dHBzOi8vcmVwby5tb25nb2RiLm9yZy95dW0vcmVkaGF0LyRyZWxlYXNldmVyL21vbmdvZGItb3JnLzMuMi94ODZfNjQvDQpncGdjaGVjaz0wDQplbmFibGVkPTE=
+    owner: root:root
+    path: /etc/yum.repos.d/mongodb-org-3.2.repo
+    permissions: '0664'
+-   encoding: b64
+    content: W2RvY2tlcnJlcG9dDQpuYW1lPURvY2tlciBSZXBvc2l0b3J5DQpiYXNldXJsPWh0dHBzOi8veXVtLmRvY2tlcnByb2plY3Qub3JnL3JlcG8vbWFpbi9vcmFjbGVsaW51eC83DQplbmFibGVkPTENCmdwZ2NoZWNrPTENCmdwZ2tleT1odHRwczovL3l1bS5kb2NrZXJwcm9qZWN0Lm9yZy9ncGc=
+    owner: root:root
+    path: /etc/yum.repos.d/docker.repo
+    permissions: '0664'
+
+groups:
+  - oinstall
+
+# Add users to the system. Users are added after groups are added.
+users:
+  - default
+  - name: oracle
+    gecos: Oracle Installer
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    primary-group: oinstall
+    groups: users
+    expiredate: 2012-09-01
+    lock_passwd: true
+    ssh-authorized-keys:
+        - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC0G5R0I21xfA0PyCFOI+TCRqSGtuEbAO9c7zRsE652jQ/LDGLS6uCL+U3eB4+e8FnnRF3A1IB9jPO7pLvhbL9nlD2PbOwqmWMp4W3a8xyjjHEcTaQ9Hc085GDtUki6hyW4+jtJ3GdK5Wp7liH438tND6EAdVeUcrt07/o99eKeDjtTd6R5AeL08JPW7OuEYLcYHH2ZkMyu795XuWAIQXeDMfbnLj6gcTgyftVZViGPoELO39Cl7g/JxVXsnNTCVtTa5CRRmaF/mKVcGuj+5fiTafx8CNh/6hkBm2hryBdTcSwGkiZgXs1GkOfmEEkk+61kNJbpHSo0FiBz1h4B91zD jamescalise@Jamess-MacBook-Pro.local
+
+package_upgrade: true
+
+packages:
+ - gcc
+ - gcc-c++
+ - wget
+ - git
+ - perl
+ - unzip
+ - bind-utils
+ - bc
+ - rng-tools
+ - libffi-devel
+ - python-devel
+ - openssl-devel
+ - xfsprogs
+ - xfsdump
+ - mdadm
+ - ruby-devel
+ - ruby
+ - xauth
+ - qemu-kvm
+ - libvirt
+ - libvirt-python
+ - libguestfs-tools
+ - virt-install
+ - policycoreutils-python
+ - tomcat
+ - tomcat-webapps
+ - tomcat-admin-webapps
+ - docker-engine
+ - policycoreutils-python
+
+runcmd:
+  - [ sh, -xc, "yum groupinstall 'Development tools'"]
+  - [ sh, -xc, "systemctl stop firewalld && systemctl disable firewalld" ]
+  - [ sh, -xc, "echo ulimit -S -n 10000 >> ~oracle/.bash_profile" ]
+  - [ sh, -xc, "echo umask 022 >> ~oracle/.bash_profile" ]
+  - [ sh, -xc, "echo oracle soft nofile 65536 >> /etc/security/limits.conf" ]
+  - [ sh, -xc, "echo oracle hard nofile 65536 >> /etc/security/limits.conf" ]
+  - [ sh, -xc, "touch /tmp/signal"]
